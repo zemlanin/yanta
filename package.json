@@ -6,6 +6,7 @@
   "author": "Anton Verinov <anton@verinov.com>",
   "license": "MIT",
   "dependencies": {
+    "drag-drop-webkit-mobile": "^1.2.0",
     "mithril": "^1.0.1"
   },
   "devDependencies": {
