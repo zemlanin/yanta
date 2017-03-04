@@ -9,7 +9,7 @@
     "mithril": "^1.0.1"
   },
   "devDependencies": {
-    "minimalist": "^1.0.0",
+    "minimist": "^1.2.0",
     "rollup": "^0.41.4",
     "rollup-plugin-commonjs": "^7.0.0",
     "rollup-plugin-livereload": "^0.4.0",
