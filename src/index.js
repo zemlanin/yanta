@@ -2,6 +2,9 @@ import m from 'mithril'
 import 'drag-drop-webkit-mobile'
 
 window.addEventListener('touchmove', () => {})
+const ENTER = 13
+const UP = 38
+const DOWN = 40
 
 const state = {
   order: [
@@ -29,6 +32,41 @@ const state = {
     },
   },
   draggedNoteId: null,
+  currentEditingNoteId: null,
+}
+
+function uuid4() {
+  const crypto = window.crypto || window.msCrypto;
+
+  if (crypto && crypto.getRandomValues) {
+    const arr = new Uint16Array(8)
+    crypto.getRandomValues(arr)
+
+    arr[3] = arr[3] & 0xFFF | 0x4000;
+    arr[4] = arr[4] & 0x3FFF | 0x8000;
+
+    const pad = function pad (num) {
+      let v = num.toString(16)
+      while (v.length < 4) {
+        v = '0' + v
+      }
+      return v
+    }
+
+    return (
+      pad(arr[0]) + pad(arr[1]) + '-'
+      + pad(arr[2]) + '-'
+      + pad(arr[3]) + '-'
+      + pad(arr[4]) + '-'
+      + pad(arr[5]) + pad(arr[6]) + pad(arr[7])
+    )
+  } else {
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+      var r = Math.random()*16|0,
+        v = c == 'x' ? r : (r&0x3|0x8);
+      return v.toString(16);
+    });
+  }
 }
 
 function moveNoteIntoPlaceOfAnother (noteId, anotherId) {
@@ -60,6 +98,8 @@ const app = {
       state.order.map(id => state.notes[id]).map((note, i) =>
         m('div',
           {
+            key: `note-${note.id}`,
+            'data-note-id': note.id,
             style: {
               minHeight: '1em',
               display: 'flex',
@@ -104,9 +144,62 @@ const app = {
                 padding: '1em',
                 backgroundColor: 'rgba(0,0,0,0)',
               },
+              onfocus: function (e) {
+                if (state.currentEditingNoteId !== note.id) {
+                  state.currentEditingNoteId = note.id
+                }
+              },
+              onblur: function (e) {
+                if (state.currentEditingNoteId === note.id) {
+                  state.currentEditingNoteId = null
+                }
+              },
               oninput: function (e) {
                 state.notes[note.id].text = e.target.value
                 e.target.style.minHeight = `${e.target.value.split('\n').length*1.15}em`
+              },
+              oncreate: function (element) {
+                if (state.currentEditingNoteId === note.id) {
+                  element.dom.focus()
+                }
+              },
+              onkeydown: e => {
+                if (e.keyCode === ENTER && (
+                  e.metaKey || e.metaKey == null && e.ctrlKey
+                )) {
+                  e.preventDefault()
+                  e.target.blur()
+                  const newNote = {
+                    id: uuid4(),
+                    text: '',
+                  }
+                  state.notes[newNote.id] = newNote
+                  state.order = state.order
+                    .slice(0, i + 1)
+                    .concat([newNote.id])
+                    .concat(state.order.slice(i + 1))
+                  state.currentEditingNoteId = newNote.id
+                } else if (
+                  e.keyCode === DOWN
+                  && !(e.metaKey || e.ctrlKey || e.altKey || e.shiftKey)
+                  && e.target.selectionStart === e.target.selectionEnd
+                  && e.target.selectionStart === e.target.value.length
+                  && i + 1 < state.order.length
+                ) {
+                  e.target.blur()
+                  document.querySelector(`[data-note-id="${state.order[i+1]}"] textarea`).focus()
+                } else if (
+                  e.keyCode === UP
+                  && !(e.metaKey || e.ctrlKey || e.altKey || e.shiftKey)
+                  && !e.target.selectionStart
+                  && !e.target.selectionEnd
+                  && i > 0
+                ) {
+                  e.target.blur()
+                  document.querySelector(`[data-note-id="${state.order[i-1]}"] textarea`).focus()
+                // } else {
+                //   console.log(e)
+                }
               },
             },
             note.text
